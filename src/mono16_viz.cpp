@@ -15,28 +15,27 @@ std::string listen_topic;
 std::string pub_topic;
 
 
-void downsampleCallback(Image* msg) {
-    Image img_out;
-    for(i=0;i < msg->height*msg->width;i++) {
-        img_out[i] = msg->data >> bit_shift;
+void downsampleCallback(const sensor_msgs::Image& msg) {
+    sensor_msgs::Image img_out;
+    for(int i=0;i < msg.height*msg.width;i++) {
+        img_out.data[i] = msg.data[i] >> bit_shift;
     }
-    img_out.height = msg->height;
-    img_out.width = msg->width;
+    img_out.height = msg.height;
+    img_out.width = msg.width;
     img_out.encoding = new_encoding;
-    img_out.is_bigendian = msg->is_bigendian;
-    img_out.atep = msg->step;
+    img_out.is_bigendian = msg.is_bigendian;
+    img_out.step = msg.step;
     pub.publish(img_out);
 }
 
 
 int main(int argc, char **argv) {
-
-    ros::param::get("~bit_shift", shift);
+    ros::param::get("~bit_shift", bit_shift);
     ros::param::get("~new encoding", new_encoding);
     ros::param::get("~listen_topic", listen_topic);
     ros::param::get("~pub_topic", pub_topic);
-    ros::param::param<std::string>("~node name", default_param, "mono_downsampler");
-    ros::param::param<std::string>("~pub_topic", default_param, listen_topic + "/8bit");
+    ros::param::param<std::string>("~node name", default_node_name, "mono_downsampler");
+    ros::param::param<std::string>("~pub_topic", default_node_name, listen_topic + "/8bit");
 
     ros::init(argc, argv, node_name);
     ros::NodeHandle nh;
