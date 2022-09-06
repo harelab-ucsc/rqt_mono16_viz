@@ -3,28 +3,45 @@
 
 #include <sstream>
 #include <stdlib.h>
+#include <vector>
 
-// namespace std;
+using namespace std;
 ros::Publisher pub;
 
 int bit_shift;
-std::string new_encoding; // TODO: make it so that new_encoding automatically determines bit_shift, relative to msg->encoding?
-std::string node_name;
-std::string default_node_name;
-std::string listen_topic;
-std::string pub_topic;
+
+string new_encoding; // TODO: make it so that new_encoding automatically determines bit_shift, relative to msg->encoding?
+string node_name;
+string default_node_name;
+string listen_topic;
+string pub_topic;
 
 
 void downsampleCallback(const sensor_msgs::Image& msg) {
     sensor_msgs::Image img_out;
+    //on creation, the img_out.data vector<uint8_t> is size 0, need STL vector resize()
+    //to allocate storage for the new image
+
+    //resize img_out.data appropriately based on output encoding type
+
+    img_out.data.resize(msg.width*msg.height);
+
+    uint8_t  shifted_value;
     for(int i=0;i < msg.height*msg.width;i++) {
-        img_out.data[i] = msg.data[i] >> bit_shift;
+        shifted_value = (uint8_t)(msg.data[i] >> bit_shift);
+        if (shifted_value > (1 << 8*sizeof(img_out.data[0]))) {
+            //print(Data truncation, not enough shift: shifted_val, bit_shift);
+            cout << "Data truncation error, not enough shift." << endl;
+            break;
+        } else {
+            img_out.data[i]=shifted_value;
+        }
     }
     img_out.height = msg.height;
     img_out.width = msg.width;
     img_out.encoding = new_encoding;
     img_out.is_bigendian = msg.is_bigendian;
-    img_out.step = msg.step;
+    img_out.step = msg.width; 
     pub.publish(img_out);
 }
 
@@ -39,6 +56,10 @@ int main(int argc, char **argv) {
 
     ros::init(argc, argv, node_name);
     ros::NodeHandle nh;
+
+    //Print/log values of parameters that the node is starting up with to help with debug
+
     ros::Subscriber sub = nh.subscribe(listen_topic, 100, downsampleCallback);
     pub = nh.advertise<sensor_msgs::Image>(pub_topic, 100);
+    ros::spin();
 }
